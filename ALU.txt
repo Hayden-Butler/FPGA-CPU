@@ -1,0 +1,99 @@
+Arithmatic logic unit systemverilog
+
+// ArithmeticLogicUnit
+
+import InstructionSetPkg::*;
+module ArithmeticLogicUnit
+(
+	input eOperation Operation,
+	
+	input  sFlags    InFlags,
+	output sFlags    OutFlags,
+	
+	input  signed [ImmediateWidth-1:0] InImm,
+	
+	input  signed [DataWidth-1:0] InSrc,
+	input  signed [DataWidth-1:0]	InDest,
+	
+	output logic signed [DataWidth-1:0] OutDest
+);
+
+
+	always_comb
+	begin
+	
+		OutFlags  = InFlags;
+		
+		case(Operation)		
+		
+			ROL:     {OutFlags.Carry,OutDest} = {InSrc,InFlags.Carry};	
+			
+			NAND:    OutDest = ~(InSrc & InDest);
+
+			LIL:	 OutDest = $signed(InImm);
+
+			LIU:
+				begin
+					if (InImm[ImmediateWidth - 1] ==  1)
+						OutDest = {InImm[ImmediateWidth - 2:0], InDest[ImmediateHighStart - 1:0]};
+					else if  (InImm[ImmediateWidth - 1] ==  0)	
+						OutDest = $signed({InImm[ImmediateWidth - 2:0], InDest[ImmediateMidStart - 1:0]});
+					else
+						OutDest = InDest;	
+				end
+			
+
+ADC: 
+begin
+    {OutFlags.Carry, OutDest}= $signed(InDest) + $signed(InSrc) + InFlags.Carry;
+
+    // Set Zero flag if result is 0
+    OutFlags.Zero = (OutDest == 0);
+
+    // Set Negative flag
+    if ($signed(OutDest) < 0) begin
+		OutFlags.Negative = 1;
+		end
+	else begin
+		OutFlags.Negative = 0;
+		end
+
+    // Set Parity flag
+    OutFlags.Parity = ~(^OutDest);
+
+    // Set Overflow flag for signed addition
+    OutFlags.Overflow = (InDest[DataWidth-1] == InSrc[DataWidth-1]) &&
+                        (OutDest[DataWidth-1] != InDest[DataWidth-1]);
+end
+
+SUB:
+begin
+    reg signed [DataWidth:0] temp_result;
+    temp_result = $signed(InDest) - $signed(InSrc) + InFlags.Carry;
+    OutDest = temp_result[DataWidth-1:0];
+    
+    // Carry
+    OutFlags.Carry = ~temp_result[DataWidth];
+
+    // Zero flag
+    OutFlags.Zero = (OutDest == 0);
+
+    // Negative flag
+    OutFlags.Negative = OutDest[DataWidth-1];
+
+    // Parity flag
+    OutFlags.Parity = ~(^OutDest);
+
+    // Overflow flag
+    OutFlags.Overflow = (InDest[DataWidth-1] != InSrc[DataWidth-1]) &&
+                        (OutDest[DataWidth-1] != InDest[DataWidth-1]);
+end
+			
+
+			
+			default:	OutDest = '0;
+			
+		endcase;
+	end
+
+endmodule

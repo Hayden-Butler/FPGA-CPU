@@ -1,0 +1,31 @@
+Register file
+//register file, controls the registers, where they read and write
+
+module RegisterFile (
+		input logic Clock,
+		input logic [5:0] AddressA,
+		input logic [15:0] WriteData,
+		input logic WriteEnable,
+		input logic [5:0] AddressB,
+		output logic [15:0] ReadDataA,
+		output logic [15:0] ReadDataB
+	);
+
+	logic [15:0] Registers [63:0];
+	
+	assign ReadDataA = Registers[AddressA];
+	assign ReadDataB = Registers[AddressB];
+	
+	initial begin
+		for (int i = 0; i < 64; i++) begin
+			Registers[i] = 16'd0;
+		end
+	end
+
+	
+	always @ (posedge Clock) begin
+		if (WriteEnable) begin
+			Registers[AddressA] <= WriteData;
+		end
+	end
+endmodule	
